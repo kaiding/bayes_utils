@@ -1,0 +1,24 @@
+---
+title: "About"
+author: "Kai Ding"
+date: "March 6, 2020"
+output: html_document
+---
+
+## About
+
+This R Shiny application was developed to apply **Bayesian predictive probability** approach to design and interim monitoring in clinical trials.
+
+Under development, more details to add.
+
+Authors: Kai Ding and Mani Lakshminarayanan <br>
+Incyte Corporation
+
+## Reference
+
+Under development.
+
+## Versions
+
+Under development.
+
