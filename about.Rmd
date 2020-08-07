@@ -7,18 +7,17 @@ output: html_document
 
 ## About
 
-This R Shiny application was developed to apply **Bayesian predictive probability** approach to design and interim monitoring in clinical trials.
+This R Shiny application is being developed to apply **Bayesian predictive probability** approach to design and interim monitoring in clinical trials.
 
 Under development, more details to add.
 
 Authors: Kai Ding and Mani Lakshminarayanan <br>
-Incyte Corporation
+
 
 ## Reference
+Lee J, Liu D. A predictive probability design for phase II cancer clinical trials. Clin Trials. 2008; 5(2): 93-106.<br>
+Dmitrienko A, Wang M. Bayesian predictive approach to interim monitoring in clinical trials. Statist. Med. 2006; 25:2178-2195.
 
-Under development.
 
-## Versions
 
-Under development.
 
