@@ -40,11 +40,20 @@ double interim(double p, double tau){
 // Conditional power
 // [[Rcpp::export]]
 double Pcond_Bin_One_cpp(double s, double n, double N, double alpha,
-                         double p1, double p0){
+                         double p1, double p0, double es){
   double pbar = (p1 + p0)/2;
   double s2 = pbar*(1 - pbar);
   double phat = s/n;
-  double theta = p1 - p0;
+  double theta;
+  if (es == 1){
+    theta = p1 - p0; 
+  }
+  if (es == 2){
+    theta = s/n - p0;
+  }
+  if (es == 3){
+    theta = 0;
+  }
   double In = n/s2;
   double IN = N/s2;
   double Zn = (phat - p0)/std::sqrt(phat*(1 - phat)/n);
@@ -90,13 +99,13 @@ double Pbayes_Bin_One_cpp(double a, double b, double s, double n,
 // Interim monitoring
 List IA_Bin_One_cpp(double n, double s, double N, double neta, 
                     double p1, double p0, double alpha, double delta, 
-                    NumericVector a, NumericVector b){
+                    NumericVector a, NumericVector b, double es){
   
   int nr = a.length();
   NumericVector prob_BP(nr);
   NumericVector prob_PP(nr);
   
-  double prob_CP = Pcond_Bin_One_cpp(s, n, N, alpha, p1, p0);
+  double prob_CP = Pcond_Bin_One_cpp(s, n, N, alpha, p1, p0, es);
   
   for (int i=0; i < nr; i++) {
     prob_BP[i] = Pbayes_Bin_One_cpp(a[i], b[i], s, n, N, neta, p0, delta);
@@ -115,7 +124,7 @@ List IA_Bin_One_cpp(double n, double s, double N, double neta,
 // Operating Characteristics
 List OC_Bin_cpp_One(double nsim, double as, double bs, double p1, double p0, 
                     NumericVector n, double delta, double neta, double alpha, double tau,
-                    NumericVector a, NumericVector b){
+                    NumericVector a, NumericVector b, double es){
   
   int nr = a.length();
   int nc = n.length();
@@ -172,7 +181,7 @@ List OC_Bin_cpp_One(double nsim, double as, double bs, double p1, double p0,
           
           prob_PP = Ppred_Bin_One_cpp(a[j], b[j], s, ni, N, alpha, p1, p0);
           
-          prob_CP =Pcond_Bin_One_cpp(s, ni, N, alpha, p1, p0);
+          prob_CP =Pcond_Bin_One_cpp(s, ni, N, alpha, p1, p0, es);
           
           ind_BP[j] = interim(prob_BP, tau);
           ind_PP[j] = interim(prob_PP, tau);
@@ -205,7 +214,7 @@ List OC_Bin_cpp_One(double nsim, double as, double bs, double p1, double p0,
           }
           
           if(ind_CP[j] == 0){
-            prob_CP =Pcond_Bin_One_cpp(s, ni, N, alpha, p1, p0);
+            prob_CP =Pcond_Bin_One_cpp(s, ni, N, alpha, p1, p0, es);
             
             ind_CP[j] = interim(prob_CP, tau);
             res_CP(j, i) += ind_CP[j];
