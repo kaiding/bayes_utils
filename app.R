@@ -16,8 +16,7 @@ source("Bayes_Utils.R")
 
 
 # Define UI for dataset viewer app ----
-ui <- navbarPage(title = span("Bayesian Predictive App", 
-                              style = "color: orange; font-size: 28px"),
+ui <- navbarPage(title = "Bayesian Predictive App",
                  
                  tabPanel(title = span("Introduction",
                                        style = "color: orange; font-size: 24px"),
