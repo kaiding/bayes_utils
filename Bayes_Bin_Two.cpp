@@ -24,11 +24,11 @@ double beta_binom(int s, int t, double a, double b, int N, int n){
 // Simulation-based
 // [[Rcpp::export]]
 double post_Bin_MC_cpp(double a1, double b1, double a2, double b2, double delta,
-                       double N,  double x1, double x2, double nsim){
+                       double N1, double N2,  double x1, double x2, double nsim){
   double a1s = a1 + x1;
-  double b1s = N - x1 + b1;
+  double b1s = N1 - x1 + b1;
   double a2s = a2 + x2;
-  double b2s = N - x2 +b2;
+  double b2s = N2 - x2 +b2;
   
   NumericVector p1 = rbeta(nsim, a1s, b1s);
   NumericVector p2 = rbeta(nsim, a2s, b2s);
@@ -53,7 +53,7 @@ double Pbayes_Bin_MC_cpp(double a1, double b1, double a2, double b2,
       double p2;
       double post;
       double x2 = s2 + t2;
-      post = post_Bin_MC_cpp(a1, b1, a2, b2, delta, N, x1, x2, nsim);
+      post = post_Bin_MC_cpp(a1, b1, a2, b2, delta, N, N, x1, x2, nsim);
       //Rcout << "t2: "<<t2<<" p2: "<<p2<<" post: "<<post<<"\n";
       if (post > neta) {
         p2 = beta_binom(s2, t2, a2, b2, N, n2);
@@ -159,13 +159,25 @@ double Pbayes_Bin_cpp(double a1, double b1, double a2, double b2,
 //Conditional Power
 // [[Rcpp::export]]
 double Pcond_Bin_cpp(double n1, double n2, double s1, double s2,
-                     double N, double alpha, double es){
+                     double N, double alpha, double es, double P1, double P2){
   double p1 = s1/n1;
   double p2 = s2/n2;
   double n = (n1 + n2)/2;
   double pbar = (s1 + s2)/(n1 + n2);
+  double theta = 0;
+  double PBAR = (P1+P2)/2;
+  double sigma = std::sqrt(PBAR*(1-PBAR));
+  if (es == 1) {
+    theta = P1 - P2;
+  }
+  if (es == 2) {
+    theta = p1 - p2;
+  }
+  if (es == 3) {
+    theta = 0;
+  }
   double Zn = (p1 - p2)/std::sqrt(pbar*(1 - pbar)*(1/n1 + 1/n2));
-  return(R::pnorm((sqrt(n)*Zn+(N-n)*es/sqrt(2)-sqrt(N)*R::qnorm(1-alpha, 0, 1, 1, 0))/sqrt(N-n), 0, 1, 1, 0));
+  return(R::pnorm((sqrt(n)*Zn+(N-n)*theta/(sigma*sqrt(2))-sqrt(N)*R::qnorm(1-alpha, 0, 1, 1, 0))/sqrt(N-n), 0, 1, 1, 0));
 }
 
 //Predictive Power
@@ -198,13 +210,14 @@ double Ppred_Bin_cpp(double n1, double n2, double s1, double s2, double N,
 // Interim monitoring
 List IA_Bin_cpp(double n1, double n2, double s1, double s2, double N, int methodpb, double nsim_p, 
                    double delta, double neta, double es, double alpha, 
-                   NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2){
+                   NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2,
+                   double P1, double P2){
   
   int nr = a1.length();
   NumericVector prob_BP(nr);
   NumericVector prob_PP(nr);
   
-  double prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es);
+  double prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
   
   for (int i=0; i < nr; i++) {
     prob_BP[i] = Pbayes_Bin_cpp(a1[i], b1[i], a2[i], b2[i], n1, s1, n2, s2,
@@ -250,7 +263,8 @@ double interim(double p, double tau){
 List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s, 
                 NumericVector n, int methodpb, double nsim_p, 
                 double delta, double neta, double es, double alpha, double tau,
-                NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2){
+                NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2,
+                double P1, double P2){
   
   int nr = a1.length();
   int nc = n.length();
@@ -316,7 +330,7 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
           prob_PP = Ppred_Bin_cpp(n1, n2, s1, s2, N,
                                   alpha, a1[j], b1[j], a2[j], b2[j]);
           
-          prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es);
+          prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
           
           ind_BP[j] = interim(prob_BP, tau);
           ind_PP[j] = interim(prob_PP, tau);
@@ -349,7 +363,7 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
           }
           
           if(ind_CP[j] == 0){
-            prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es);
+            prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
             
             ind_CP[j] = interim(prob_CP, tau);
             res_CP(j, i) += ind_CP[j];
