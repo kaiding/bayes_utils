@@ -209,15 +209,18 @@ double Ppred_Bin_cpp(double n1, double n2, double s1, double s2, double N,
 // [[Rcpp::export]]
 // Interim monitoring
 List IA_Bin_cpp(double n1, double n2, double s1, double s2, double N, int methodpb, double nsim_p, 
-                   double delta, double neta, double es, double alpha, 
+                   double delta, double neta, double alpha, 
                    NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2,
                    double P1, double P2){
   
   int nr = a1.length();
   NumericVector prob_BP(nr);
   NumericVector prob_PP(nr);
+  NumericVector prob_CP(3);
   
-  double prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
+  for (int es =1; es <4; es++){
+    prob_CP[es-1] = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
+  }
   
   for (int i=0; i < nr; i++) {
     prob_BP[i] = Pbayes_Bin_cpp(a1[i], b1[i], a2[i], b2[i], n1, s1, n2, s2,
@@ -262,7 +265,7 @@ double interim(double p, double tau){
 // Operating Characteristics
 List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s, 
                 NumericVector n, int methodpb, double nsim_p, 
-                double delta, double neta, double es, double alpha, double tau,
+                double delta, double neta, double alpha, double tau,
                 NumericVector a1, NumericVector b1, NumericVector a2, NumericVector b2,
                 double P1, double P2){
   
@@ -272,7 +275,9 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
   
   NumericMatrix res_BP(nr, nc+2);
   NumericMatrix res_PP(nr, nc+2);
-  NumericMatrix res_CP(nr, nc+2);
+  NumericMatrix res_CP1(nr, nc+2);
+  NumericMatrix res_CP2(nr, nc+2);
+  NumericMatrix res_CP3(nr, nc+2);
   
   //Rcout << "Interim+final: " << nc << "\n";
   
@@ -301,13 +306,17 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
     for (int j = 0; j < nr; ++j){
       NumericVector ind_BP(nr);
       NumericVector ind_PP(nr);
-      NumericVector ind_CP(nr);
+      NumericVector ind_CP1(nr);
+      NumericVector ind_CP2(nr);
+      NumericVector ind_CP3(nr);
      // Rcout << "..."<< "scenario: "<< j+1 << "\n";
 
       for (int i = 0; i < nc; ++i){
         double prob_BP;
         double prob_PP;
-        double prob_CP;
+        double prob_CP1;
+        double prob_CP2;
+        double prob_CP3;
         
        // Rcout << "......"<<"look: "<< i+1 << "\n";
        // Rcout << "......"<< "Current Ind_BP: " << ind_BP[j] << "\n";  
@@ -330,19 +339,27 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
           prob_PP = Ppred_Bin_cpp(n1, n2, s1, s2, N,
                                   alpha, a1[j], b1[j], a2[j], b2[j]);
           
-          prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
+          prob_CP1 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 1, P1, P2);
+          prob_CP2 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 2, P1, P2);
+          prob_CP3 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 3, P1, P2);
           
           ind_BP[j] = interim(prob_BP, tau);
           ind_PP[j] = interim(prob_PP, tau);
-          ind_CP[j] = interim(prob_CP, tau);
+          ind_CP1[j] = interim(prob_CP1, tau);
+          ind_CP2[j] = interim(prob_CP2, tau);
+          ind_CP3[j] = interim(prob_CP3, tau);
           
           res_BP(j, i) += ind_BP[j];
           res_PP(j, i) += ind_PP[j];
-          res_CP(j, i) += ind_CP[j];
+          res_CP1(j, i) += ind_CP1[j];
+          res_CP2(j, i) += ind_CP2[j];
+          res_CP3(j, i) += ind_CP3[j];
           
           res_BP(j, nc+1) += ind_BP[j]*n[i];
           res_PP(j, nc+1) += ind_PP[j]*n[i];
-          res_CP(j, nc+1) += ind_CP[j]*n[i];
+          res_CP1(j, nc+1) += ind_CP1[j]*n[i];
+          res_CP2(j, nc+1) += ind_CP2[j]*n[i];
+          res_CP3(j, nc+1) += ind_CP3[j]*n[i];
         }
         
         else if (i < nc - 1) {
@@ -362,12 +379,28 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
             res_PP(j, nc+1) += ind_PP[j]*n[i];
           }
           
-          if(ind_CP[j] == 0){
-            prob_CP = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, es, P1, P2);
+          if(ind_CP1[j] == 0){
+            prob_CP1 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 1, P1, P2);
             
-            ind_CP[j] = interim(prob_CP, tau);
-            res_CP(j, i) += ind_CP[j];
-            res_CP(j, nc+1) += ind_CP[j]*n[i];
+            ind_CP1[j] = interim(prob_CP1, tau);
+            res_CP1(j, i) += ind_CP1[j];
+            res_CP1(j, nc+1) += ind_CP1[j]*n[i];
+          }
+          
+          if(ind_CP2[j] == 0){
+            prob_CP2 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 2, P1, P2);
+            
+            ind_CP2[j] = interim(prob_CP2, tau);
+            res_CP2(j, i) += ind_CP2[j];
+            res_CP2(j, nc+1) += ind_CP2[j]*n[i];
+          }
+          
+          if(ind_CP3[j] == 0){
+            prob_CP3 = Pcond_Bin_cpp(n1, n2, s1, s2, N, alpha, 3, P1, P2);
+            
+            ind_CP3[j] = interim(prob_CP3, tau);
+            res_CP3(j, i) += ind_CP3[j];
+            res_CP3(j, nc+1) += ind_CP3[j]*n[i];
           }
         }
         
@@ -386,10 +419,22 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
             if (ZN < z_final) res_PP(j, i) += 1;
           }
           
-          if(ind_CP[j] == 1) res_CP(j, i) += 1;
+          if(ind_CP1[j] == 1) res_CP1(j, i) += 1;
           else {
-            res_CP(j, nc+1) += n[i];
-            if (ZN < z_final) res_CP(j, i) += 1;
+            res_CP1(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP1(j, i) += 1;
+          }
+          
+          if(ind_CP2[j] == 1) res_CP2(j, i) += 1;
+          else {
+            res_CP2(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP2(j, i) += 1;
+          }
+          
+          if(ind_CP3[j] == 1) res_CP3(j, i) += 1;
+          else {
+            res_CP3(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP3(j, i) += 1;
           }
         }
        // Rcout << "......"<<  "PredProb/PredPow/CondPow"<< prob_BP << " " << prob_PP << " " << prob_CP << "\n"; 
@@ -404,13 +449,18 @@ List OC_Bin_cpp(double nsim, double a1s, double b1s, double a2s, double b2s,
   }
   res_BP = res_BP/nsim;
   res_PP = res_PP/nsim;
-  res_CP = res_CP/nsim;
+  res_CP1 = res_CP1/nsim;
+  res_CP2 = res_CP2/nsim;
+  res_CP3 = res_CP3/nsim;
   res_BP(_, nc) = 1 - res_BP(_, nc-1);
   res_PP(_, nc) = 1 - res_PP(_, nc-1);
-  res_CP(_, nc) = 1 - res_CP(_, nc-1);
+  res_CP1(_, nc) = 1 - res_CP1(_, nc-1);
+  res_CP2(_, nc) = 1 - res_CP2(_, nc-1);
+  res_CP3(_, nc) = 1 - res_CP3(_, nc-1);
   
   List output = List::create(Named("PredProb") = res_BP, _["PredPower"] = res_PP, 
-                             _["CondPower"] = res_CP(1,_));
+                             _["CondPower1"] = res_CP1(1,_), _["CondPower2"] = res_CP2(1,_),
+                             _["CondPower3"] = res_CP3(1,_));
   return(output);
 }
 
