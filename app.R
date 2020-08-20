@@ -11,7 +11,7 @@ library(RcppNumerical)
 
 Rcpp::sourceCpp("Bayes_Bin_Two.cpp")
 Rcpp::sourceCpp("Bayes_Bin_One.cpp")
-Rcpp::sourceCpp("Bayes_Normal_.cpp")
+Rcpp::sourceCpp("Bayes_Normal_Two.cpp")
 source("Bayes_Utils.R")
 
 
@@ -233,10 +233,14 @@ ui <- navbarPage(title = "Bayesian Predictive App",
                                                                       label = "One-sided alpha for predictive/conditional power approach",
                                                                       value = "0.1"),
                                                             
-                                                            textInput(inputId = "es_IA_Bin",
-                                                                      label = "Effective size under althernative hypothesis",
-                                                                      value = "0.2065"),
+                                                            textInput(inputId = "P1_IA_Bin",
+                                                                      label = "Hypothesized proportion in group 1",
+                                                                      value = "0.79"),
                                                             
+                                                            textInput(inputId = "P2_IA_Bin",
+                                                                      label = "Hypothesized proportion in group 2",
+                                                                      value = "0.7"),
+
                                                             textInput(inputId = "p1_IA_Bin",
                                                                       label = "Prior rate in group 1 
                                                    (Specify if Beta priori is not entered. Semicolon-delimited for different priors.
@@ -330,9 +334,17 @@ ui <- navbarPage(title = "Bayesian Predictive App",
                                                                       label = "One-sided alpha for predictive/conditional power",
                                                                       value = "0.1"),
                                                             
-                                                            textInput(inputId = "es_IA_Norm",
-                                                                      label = "Effective size under althernative hypothesis",
-                                                                      value = "0.4706"),
+                                                            textInput(inputId = "MU1_IA_Norm",
+                                                                      label = "Hypothesized mean in group 1",
+                                                                      value = "12"),
+                                                            
+                                                            textInput(inputId = "MU2_IA_Norm",
+                                                                      label = "Hypothesized mean in group 2",
+                                                                      value = "8"),
+                                                            
+                                                            textInput(inputId = "sigma_IA_Norm",
+                                                                      label = "Hypothesized comman standard deviation",
+                                                                      value = "8.5"),
                                                             
                                                             textInput(inputId = "mu1_IA_Norm",
                                                                       label = "Prior means in group 1, semicolon-delimited for different priors.",
@@ -505,7 +517,6 @@ ui <- navbarPage(title = "Bayesian Predictive App",
                                                                       label = 'Parameter b for Beta priori B(a, b) in simulation for group 2',
                                                                       value = "1"),
                                                             
-                                                            
                                                             textInput(inputId = "nsim_OC_Bin",
                                                                       label = "Number of replicas for evaluation",
                                                                       value = "1000"),
@@ -528,9 +539,13 @@ ui <- navbarPage(title = "Bayesian Predictive App",
                                                                       label = "One-sided alpha for predictive/conditional power",
                                                                       value = "0.1"),
                                                             
-                                                            textInput(inputId = "es_OC_Bin",
-                                                                      label = "Effective size under althernative hypothesis",
-                                                                      value = "0.2076"),
+                                                            textInput(inputId = "P1_OC_Bin",
+                                                                      label = "Hypothesized proportion in group 1",
+                                                                      value = "0.79"),
+                                                            
+                                                            textInput(inputId = "P2_OC_Bin",
+                                                                      label = "Hypothesized proportion in group 2",
+                                                                      value = "0.7"),
                                                             
                                                             textInput(inputId = "a1_OC_Bin",
                                                                       label = "Prior a for Beta priori B(a, b) in group 1 for power/probability calculation, 
@@ -634,9 +649,17 @@ ui <- navbarPage(title = "Bayesian Predictive App",
                                                                       label = "One-sided alpha for predictive/conditional power",
                                                                       value = "0.1"),
                                                             
-                                                            textInput(inputId = "es_OC_Norm",
-                                                                      label = "Effective size under althernative hypothesis",
-                                                                      value = "0.4706"),
+                                                            textInput(inputId = "MU1_OC_Norm",
+                                                                      label = "Hypothesized mean in group 1",
+                                                                      value = "12"),
+                                                            
+                                                            textInput(inputId = "MU2_OC_Norm",
+                                                                      label = "Hypothesized mean in group 2",
+                                                                      value = "8"),
+                                                            
+                                                            textInput(inputId = "sigma_OC_Norm",
+                                                                      label = "Hypothesized comman standard deviation",
+                                                                      value = "8.5"),
                                                             
                                                             textInput(inputId = "mu1_OC_Norm",
                                                                       label = "Prior means in group 1 for power/probability calculation, 
@@ -843,10 +866,12 @@ server <- function(input, output, session) {
                                 c(round(res_IA_Bin_One$PredPower, digits = 3),
                                   rep("", nrow_IA_Binpp_One-length(a))))
       
-
       
-      res_IA_Bin_cp_One = cbind(c("Conditional Power", paste0("alpha=", input$alpha_IA_Bin_One), ""), 
-                            rep("", 3), c(round(res_IA_Bin_One$CondPower, digits = 3), "", ""))
+      
+      res_IA_Bin_cp_One = cbind(c("Conditional Power", paste0("alpha=", input$alpha_IA_Bin_One), 
+                                  c("with effect size under alternative", "with effect size estimated by interim data",
+                                    "with effect size under null hypothesis")), 
+                            rep("", 5), c("", "", round(res_IA_Bin_One$CondPower, digits = 3)))
       
       
       res_IA_Bin_One = rbind(res_IA_Bin_pb_One, res_IA_Bin_pp_One, res_IA_Bin_cp_One)
@@ -892,7 +917,9 @@ server <- function(input, output, session) {
         delta = as.numeric(input$delta_IA_Bin)
         neta = as.numeric(input$neta_IA_Bin)
         alpha = as.numeric(input$alpha_IA_Bin)
-        es = as.numeric(input$es_IA_Bin)
+        P1 = as.numeric(input$P1_IA_Bin)
+        P2 = as.numeric(input$P2_IA_Bin)
+        
         if(input$a1_IA_Bin == "" | input$b1_IA_Bin =="" |input$a2_IA_Bin == "" | input$b2_IA_Bin ==""){
             p1 = as.numeric(stringr::str_split(input$p1_IA_Bin, ";")[[1]])
             p2 = as.numeric(stringr::str_split(input$p2_IA_Bin, ";")[[1]])
@@ -920,8 +947,8 @@ server <- function(input, output, session) {
         r2 = as.numeric(input$r2_IA_Bin)
         
         res_IA_Bin = IA_Bin_cpp(n1, n2, r1, r2, N, 1, 1000, 
-                                delta, neta, es, alpha, 
-                                a1, b1, a2, b2)
+                                delta, neta, alpha, 
+                                a1, b1, a2, b2, P1, P2)
         
         
         remove_modal_spinner()
@@ -944,9 +971,10 @@ server <- function(input, output, session) {
                                 rep("", nrow_IA_Binpp-length(a1))))
         
         res_IA_Bin_cp = cbind(c("Conditional Power", paste0("alpha=", input$alpha_IA_Bin), 
-                                 paste0("effect size under alternative: ", input$es_IA_Bin)), 
-                               rep("", 3), rep("", 3), rbind(round(res_IA_Bin$CondPower, digits = 3),
-                                                 matrix(rep("", 2*length(res_IA_Bin$CondPower)), nrow = 2)))
+                                c("with effect size under alternative", "with effect size estimated by interim data",
+                                  "with effect size under null hypothesis")), 
+                               rep("", 5), rep("", 5), 
+                              c(rep("",2), round(res_IA_Bin$CondPower, digits = 3)))
         
         res_IA_Bin = rbind(res_IA_Bin_pb, res_IA_Bin_pp, res_IA_Bin_cp)
         
@@ -994,7 +1022,9 @@ server <- function(input, output, session) {
         delta = as.numeric(input$delta_IA_Norm)
         neta = as.numeric(input$neta_IA_Norm)
         alpha = as.numeric(input$alpha_IA_Norm)
-        es = as.numeric(input$es_IA_Norm)
+        MU1 = as.numeric(input$MU1_IA_Norm)
+        MU2 = as.numeric(input$MU2_IA_Norm)
+        sigma = as.numeric(input$sigma_IA_Norm)
         
         
         m1star = as.numeric(stringr::str_split(input$mu1_IA_Norm, ";")[[1]])
@@ -1017,9 +1047,9 @@ server <- function(input, output, session) {
         
         
         res_IA_Norm = IA_Normal_cpp(n1, n2, N, nsim_p, methodpb, 1,
-                                    delta, neta, es, alpha, 
+                                    delta, neta, alpha, 
                                     x1bar, x2bar, s1, s2,
-                                    m1star, m2star, sstar)
+                                    m1star, m2star, sstar, MU1, MU2, sigma)
         
         remove_modal_spinner()
         
@@ -1039,9 +1069,9 @@ server <- function(input, output, session) {
                                rep("", nrow_IA_Normpp - length(m1star))))
         
         res_IA_Norm_cp = cbind(c("Conditional Power", paste0("alpha=", input$alpha_IA_Norm), 
-                                 paste0("effect size under alternative: ", input$es_IA_Norm)), 
-                               rep("", 3), rbind(round(res_IA_Norm$CondPower, digits = 3),
-                                                 matrix(rep("", 2*length(res_IA_Norm$CondPower)), nrow = 2)))
+                                 c("with effect size under alternative", "with effect size estimated by interim data",
+                                   "with effect size under null hypothesis")), 
+                               rep("", 5), c(rep("", 2),round(res_IA_Norm$CondPower, digits = 3)))
         
         res_IA_Norm = rbind(res_IA_Norm_pb, res_IA_Norm_pp, res_IA_Norm_cp)
         
@@ -1134,9 +1164,13 @@ server <- function(input, output, session) {
                             rbind(round(res_OC_Bin_One$PredPower, digits = 3),
                                   matrix(rep("", (length(n)+2)*(nrow_OC_Binpp_One-length(a))), ncol = length(n)+2)))
       
-      res_OC_Bin_cp_One = cbind(c("Conditional Power", paste0("alpha=", input$alpha_OC_Bin_One)), 
-                            rep("", 2), rbind(round(res_OC_Bin_One$CondPower, digits = 3),
-                                                          matrix(rep("", 1*length(res_OC_Bin_One$CondPower)), nrow = 1)))
+      res_OC_Bin_cp_One = cbind(c("Conditional Power", paste0("alpha=", input$alpha_OC_Bin_One),
+                                  c("with effect size under alternative", "with effect size estimated by interim data",
+                                    "with effect size under null hypothesis")), 
+                            rep("", 5), rbind(matrix(rep("", 2*length(res_OC_Bin_One$CondPower1)), nrow = 2),
+                              round(res_OC_Bin_One$CondPower1, digits = 3),
+                              round(res_OC_Bin_One$CondPower2, digits = 3),
+                              round(res_OC_Bin_One$CondPower3, digits = 3)))
       
       res_OC_Bin_One = rbind(res_OC_Bin_pb_One, res_OC_Bin_pp_One, res_OC_Bin_cp_One)
       
@@ -1203,7 +1237,8 @@ server <- function(input, output, session) {
         delta = as.numeric(input$delta_OC_Bin)
         neta = as.numeric(input$neta_OC_Bin)
         alpha = as.numeric(input$alpha_OC_Bin)
-        es = as.numeric(input$es_OC_Bin)
+        P1 = as.numeric(input$P1_OC_Bin)
+        P2 = as.numeric(input$P2_OC_Bin)
         tau = as.numeric(input$tau_OC_Bin)
         
         a1s = as.numeric(input$a1s_OC_Bin)
@@ -1225,8 +1260,8 @@ server <- function(input, output, session) {
         
         res_OC_Bin = OC_Bin_cpp(nsim, a1s, b1s, a2s, b2s, 
                                  n, methodpb, nsim_p, 
-                                 delta, neta, es, alpha, tau,
-                                 a1, b1, a2, b2)
+                                 delta, neta, alpha, tau,
+                                 a1, b1, a2, b2, P1, P2)
         
         remove_modal_spinner()
         
@@ -1247,9 +1282,13 @@ server <- function(input, output, session) {
                                     matrix(rep("", (length(n)+2)*(nrow_OC_Bin-length(a1))), ncol = length(n)+2)))
         
         res_OC_Bin_cp = cbind(c("Conditional Power", paste0("alpha=", input$alpha_OC_Bin), 
-                                paste0("effect size under alternative: ", input$es_OC_Bin)), 
-                              rep("", 3), rep("", 3), rbind(round(res_OC_Bin$CondPower, digits = 3),
-                                                            matrix(rep("", 2*length(res_OC_Bin$CondPower)), nrow = 2)))
+                                c("with effect size under alternative", "with effect size estimated by interim data",
+                                  "with effect size under null hypothesis")), 
+                              rep("", 5), rep("", 5), 
+                              rbind(matrix(rep("", 2*length(res_OC_Bin$CondPower1)), nrow = 2),
+                                round(res_OC_Bin$CondPower1, digits = 3),
+                                round(res_OC_Bin$CondPower2, digits = 3),
+                                round(res_OC_Bin$CondPower3, digits = 3)))
         
         res_OC_Bin = rbind(res_OC_Bin_pb, res_OC_Bin_pp, res_OC_Bin_cp)
         
@@ -1319,7 +1358,9 @@ server <- function(input, output, session) {
         delta = as.numeric(input$delta_OC_Norm)
         neta = as.numeric(input$neta_OC_Norm)
         alpha = as.numeric(input$alpha_OC_Norm)
-        es = as.numeric(input$es_OC_Norm)
+        MU1 = as.numeric(input$MU1_OC_Norm)
+        MU2 = as.numeric(input$MU2_OC_Norm)
+        sigma = as.numeric(input$sigma_OC_Norm)
         tau = as.numeric(input$tau_OC_Norm)
         
         mu1star = as.numeric(input$mu1s_OC_Norm)
@@ -1340,8 +1381,9 @@ server <- function(input, output, session) {
         
         res_OC_Norm = OC_Normal_cpp(nsim, mu1star, mu2star, sdstar,
                                     n, sdcom, nsim_p, methodpb, 1,
-                                    delta, neta, es, alpha, tau,
-                                    m1star, m2star, sstar)
+                                    delta, neta, alpha, tau,
+                                    m1star, m2star, sstar,
+                                    MU1, MU2, sigma)
         
         remove_modal_spinner() 
         
@@ -1360,9 +1402,13 @@ server <- function(input, output, session) {
                                      matrix(rep("", (length(n)+2)*(nrow_OC_Norm-length(m1star))), ncol = length(n)+2)))
         
         res_OC_Norm_cp = cbind(c("Conditional Power", paste0("alpha=", input$alpha_OC_Norm), 
-                                      paste0("effect size under alternative: ", input$es_OC_Norm)), 
-                               rep("", 3), rbind(round(res_OC_Norm$CondPower, digits = 3),
-                                         matrix(rep("", 2*length(res_OC_Norm$CondPower)), nrow = 2)))
+                                 c("with effect size under alternative", "with effect size estimated by interim data",
+                                   "with effect size under null hypothesis")), 
+                               rep("", 5), rbind(matrix(rep("", 2*length(res_OC_Norm$CondPower1)), nrow = 2),
+                                                 round(res_OC_Norm$CondPower1, digits = 3),
+                                                 round(res_OC_Norm$CondPower2, digits = 3),
+                                                 round(res_OC_Norm$CondPower3, digits = 3)
+                                         ))
         
     
         res_OC_interims = sapply(1:(length(n)-1), Norm_IA_string)
