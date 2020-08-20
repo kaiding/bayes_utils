@@ -257,7 +257,7 @@ double Pcond_Normal_cpp(double n, double alpha, double N,
 // [[Rcpp::export]]
 // Interim monitoring
 List IA_Normal_cpp(double n1, double n2, double N, double nsim_p, int methodpb, int methodpp,
-                   double delta, double neta, double es, double alpha, 
+                   double delta, double neta, double alpha, 
                    double x1bar, double x2bar, double s1, double s2,
                    NumericVector m1star, NumericVector m2star, NumericVector sstar,
                    double MU1, double MU2, double sigma){
@@ -265,10 +265,14 @@ List IA_Normal_cpp(double n1, double n2, double N, double nsim_p, int methodpb, 
   int nr = m1star.length();
   NumericVector prob_BP(nr);
   NumericVector prob_PP(nr);
+  NumericVector prob_CP(3);
   
   double psd = pooledsd_cpp(s1, s2, n1, n2);
   double n = (n1 + n2)/2;
-  double prob_CP = Pcond_Normal_cpp(n, alpha, N, x1bar, x2bar, psd, es, MU1, MU2, sigma);
+  
+  for (int es =1; es <4; es++){
+    prob_CP[es-1] = Pcond_Normal_cpp(n, alpha, N, x1bar, x2bar, psd, es, MU1, MU2, sigma);
+  }
   
   for (int i=0; i < nr; i++) {
     prob_BP[i] = Pbayes_Normal_cpp(n1, n2, N, x1bar, x2bar, psd,
@@ -292,7 +296,7 @@ List IA_Normal_cpp(double n1, double n2, double N, double nsim_p, int methodpb, 
 // Operating Characteristics
 List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
                             NumericVector n, double sdcom, double nsim_p, int methodpb, int methodpp,
-                            double delta, double neta, double es, double alpha, double tau,
+                            double delta, double neta, double alpha, double tau,
                             NumericVector m1star, NumericVector m2star, NumericVector sstar,
                             double MU1, double MU2, double sigma){
   int nr = m1star.length();
@@ -303,7 +307,9 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
   
   NumericMatrix res_BP(nr, nc+2);
   NumericMatrix res_PP(nr, nc+2);
-  NumericMatrix res_CP(nr, nc+2);
+  NumericMatrix res_CP1(nr, nc+2);
+  NumericMatrix res_CP2(nr, nc+2);
+  NumericMatrix res_CP3(nr, nc+2);
   
   double z_final;
   z_final = R::qnorm(1-alpha, 0, 1, 1, 0);
@@ -325,13 +331,17 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
     for(int j = 0; j < nr; ++j){
       NumericVector ind_BP(nr);
       NumericVector ind_PP(nr);
-      NumericVector ind_CP(nr);
+      NumericVector ind_CP1(nr);
+      NumericVector ind_CP2(nr);
+      NumericVector ind_CP3(nr);
       
       
       for(int i = 0; i < nc; ++i){
         double prob_BP;
         double prob_PP;
-        double prob_CP;
+        double prob_CP1;
+        double prob_CP2;
+        double prob_CP3;
         //Rcout << "sim: "<< k+1 << "\n";
         //Rcout << "scenario: "<< j+1 << "\n";
         //Rcout << "look: "<< i+1 << "\n";
@@ -349,19 +359,27 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
                                               m1star[j], m2star[j], sstar[j],
                                               alpha, nsim_p, methodpp);
           
-          prob_CP = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], es, MU1, MU2, sigma);
+          prob_CP1 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 1, MU1, MU2, sigma);
+          prob_CP2 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 2, MU1, MU2, sigma);
+          prob_CP3 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 3, MU1, MU2, sigma);
           
           ind_BP[j] = interim(prob_BP, tau);
           ind_PP[j] = interim(prob_PP, tau);
-          ind_CP[j] = interim(prob_CP, tau);
+          ind_CP1[j] = interim(prob_CP1, tau);
+          ind_CP2[j] = interim(prob_CP2, tau);
+          ind_CP3[j] = interim(prob_CP3, tau);
           
           res_BP(j, i) += ind_BP[j];
           res_PP(j, i) += ind_PP[j];
-          res_CP(j, i) += ind_CP[j];
+          res_CP1(j, i) += ind_CP1[j];
+          res_CP2(j, i) += ind_CP2[j];
+          res_CP3(j, i) += ind_CP3[j];
           
           res_BP(j, nc+1) += ind_BP[j]*n[i];
           res_PP(j, nc+1) += ind_PP[j]*n[i];
-          res_CP(j, nc+1) += ind_CP[j]*n[i];
+          res_CP1(j, nc+1) += ind_CP1[j]*n[i];
+          res_CP2(j, nc+1) += ind_CP2[j]*n[i];
+          res_CP3(j, nc+1) += ind_CP3[j]*n[i];
         }
         
         else if (i < nc - 1) {
@@ -385,12 +403,28 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
             res_PP(j, nc+1) += ind_PP[j]*n[i];
           }
           
-          if(ind_CP[j] == 0){
-            prob_CP = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], es, MU1, MU2, sigma);
+          if(ind_CP1[j] == 0){
+            prob_CP1 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 1, MU1, MU2, sigma);
             
-            ind_CP[j] = interim(prob_CP, tau);
-            res_CP(j, i) += ind_CP[j];
-            res_CP(j, nc+1) += ind_CP[j]*n[i];
+            ind_CP1[j] = interim(prob_CP1, tau);
+            res_CP1(j, i) += ind_CP1[j];
+            res_CP1(j, nc+1) += ind_CP1[j]*n[i];
+          }
+          
+          if(ind_CP2[j] == 0){
+            prob_CP2 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 2, MU1, MU2, sigma);
+            
+            ind_CP2[j] = interim(prob_CP2, tau);
+            res_CP2(j, i) += ind_CP2[j];
+            res_CP2(j, nc+1) += ind_CP2[j]*n[i];
+          }
+          
+          if(ind_CP3[j] == 0){
+            prob_CP3 = Pcond_Normal_cpp(n[i], alpha, N, x1bar[i], x2bar[i], psd[i], 3, MU1, MU2, sigma);
+            
+            ind_CP3[j] = interim(prob_CP3, tau);
+            res_CP3(j, i) += ind_CP3[j];
+            res_CP3(j, nc+1) += ind_CP3[j]*n[i];
           }
         }
         
@@ -409,10 +443,22 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
             if (ZN < z_final) res_PP(j, i) += 1;
           }
           
-          if(ind_CP[j] == 1) res_CP(j, i) += 1;
+          if(ind_CP1[j] == 1) res_CP1(j, i) += 1;
           else {
-            res_CP(j, nc+1) += n[i];
-            if (ZN < z_final) res_CP(j, i) += 1;
+            res_CP1(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP1(j, i) += 1;
+          }
+          
+          if(ind_CP2[j] == 1) res_CP2(j, i) += 1;
+          else {
+            res_CP2(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP2(j, i) += 1;
+          }
+          
+          if(ind_CP3[j] == 1) res_CP3(j, i) += 1;
+          else {
+            res_CP3(j, nc+1) += n[i];
+            if (ZN < z_final) res_CP3(j, i) += 1;
           }
         }
 
@@ -425,13 +471,18 @@ List OC_Normal_cpp(double nsim, double mu1star, double mu2star, double sdstar,
   
   res_BP = res_BP/nsim;
   res_PP = res_PP/nsim;
-  res_CP = res_CP/nsim;
+  res_CP1 = res_CP1/nsim;
+  res_CP2 = res_CP2/nsim;
+  res_CP3 = res_CP3/nsim;
   res_BP(_, nc) = 1 - res_BP(_, nc-1);
   res_PP(_, nc) = 1 - res_PP(_, nc-1);
-  res_CP(_, nc) = 1 - res_CP(_, nc-1);
+  res_CP1(_, nc) = 1 - res_CP1(_, nc-1);
+  res_CP2(_, nc) = 1 - res_CP2(_, nc-1);
+  res_CP3(_, nc) = 1 - res_CP3(_, nc-1);
   
   List output = List::create(Named("PredProb") = res_BP, _["PredPower"] = res_PP, 
-                             _["CondPower"] = res_CP(1,_));
+                             _["CondPower1"] = res_CP1(1,_), _["CondPower2"] = res_CP2(1,_),
+                             _["CondPower3"] = res_CP3(1,_));
   return(output);
 }
 
