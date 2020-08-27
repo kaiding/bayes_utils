@@ -11,7 +11,7 @@ This R Shiny application is being developed to apply **Bayesian predictive proba
 
 Under development, more details to add.
 
-Authors: Kai Ding and Mani Lakshminarayanan <br>
+Authors: Kai Ding <br>
 
 
 ## Reference
